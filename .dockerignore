@@ -1,0 +1,10 @@
+node_modules
+data
+.env
+*.log
+dryrun_trades.csv
+dryrun_stats.json
+.git
+.gitignore
+README.md
+diagnose*.ts.bak

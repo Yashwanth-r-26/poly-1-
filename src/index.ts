@@ -35,6 +35,28 @@ async function main() {
 
   const strat = new Strategy(feed, book);
 
+  // graceful shutdown: flush stats so a restart doesn't lose the running tally
+  let shuttingDown = false;
+  const shutdown = (sig: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`\n[shutdown] ${sig} received — flushing stats and exiting`);
+    try { strat.printSummary(); } catch { /* */ }
+    process.exit(0);
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM")); // docker stop sends this
+  process.on("SIGINT", () => shutdown("SIGINT"));   // ctrl-c
+
+  // crash guards: a WS callback throwing should NOT kill a multi-day run.
+  // Log it and keep going; the loop and reconnect logic recover.
+  process.on("unhandledRejection", (reason) => {
+    console.log(`[guard] unhandledRejection: ${reason instanceof Error ? reason.message : reason}`);
+  });
+  process.on("uncaughtException", (err) => {
+    console.log(`[guard] uncaughtException: ${err?.message || err}`);
+    // do not exit — let the loop and reconnects carry on
+  });
+
   console.log("\n🚀 running — connect a few min before judging (first window's strike may be missed)\n");
 
   let ticks = 0;
