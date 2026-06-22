@@ -3,6 +3,7 @@ import { ChainlinkFeed } from "./feed.js";
 import { BookFeed } from "./bookfeed.js";
 import { initExecutor } from "./executor.js";
 import { Strategy } from "./strategy.js";
+import { startStatusServer } from "./status.js";
 
 async function main() {
   console.log("🤖 btc5bot — BTC/ETH 5m & 15m structured strategy");
@@ -34,6 +35,9 @@ async function main() {
   }
 
   const strat = new Strategy(feed, book);
+
+  // status dashboard — view stats in a browser, no SSH needed
+  startStatusServer(strat.getSim(), () => strat.getMeta());
 
   // graceful shutdown: flush stats so a restart doesn't lose the running tally
   let shuttingDown = false;

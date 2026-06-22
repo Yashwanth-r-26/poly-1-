@@ -30,6 +30,23 @@ docker compose logs --since=1h | grep FIRE  # just the trades in the last hour
 cat data/dryrun_stats.json                 # current win rate + P&L snapshot (updates every ~60s)
 ```
 
+## View results in your browser (no SSH)
+
+The bot serves a live dashboard on port 8080:
+
+- `http://<VM_IP>:8080/`       — auto-refreshing stats page (win rate, P&L, per-price breakdown)
+- `http://<VM_IP>:8080/csv`    — download the full trade log
+- `http://<VM_IP>:8080/stats`  — raw JSON
+- `http://<VM_IP>:8080/health` — uptime check
+
+**You must open port 8080 in your VM's cloud firewall / security group** for the
+browser to reach it (this is a separate setting from Docker's port mapping).
+Find your VM's public IP and visit `http://THAT_IP:8080`.
+
+Security note: this endpoint is unauthenticated and exposes only dry-run stats —
+fine for that. If you ever go live, don't expose it publicly; bind it to
+localhost and SSH-tunnel instead.
+
 The CSV and stats live in `./data/` on the HOST (mounted volume), so they persist
 even if you destroy and recreate the container. Pull them anytime:
 

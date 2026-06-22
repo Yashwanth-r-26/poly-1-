@@ -42,4 +42,7 @@ USER node
 # the bot is a long-running loop; SIGTERM triggers graceful flush
 STOPSIGNAL SIGTERM
 
+# status dashboard port
+EXPOSE 8080
+
 CMD ["npx", "tsx", "src/index.ts"]

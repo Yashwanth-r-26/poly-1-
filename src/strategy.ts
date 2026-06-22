@@ -119,6 +119,7 @@ export class Strategy {
         // ---- ALL GATES PASS -> FIRE ----
         const entryPrice = ask ?? config.priceBandHigh;
         const strike = this.feed.getStrike(t.asset, t.windowSec, ws);
+        const liveAtEntry = this.feed.getLive(t.asset);
         const res = await placeOrder({
           tokenId: s.token!, side: s.side, amountUsd: config.stakeUsd, refPrice: entryPrice,
         });
@@ -136,6 +137,9 @@ export class Strategy {
           entryPrice,
           strike: strike ?? entryPrice,
           amountUsd: config.stakeUsd,
+          secsLeftAtEntry: secs,
+          liveAtEntry,
+          diffAtEntry: strike != null && liveAtEntry != null ? Math.abs(strike - liveAtEntry) : undefined,
         });
         this.busyToken = s.token!;
         this.busyUntilSec = windowClose(tNowSec, t.windowSec);
@@ -188,21 +192,37 @@ export class Strategy {
 
   printSummary() {
     const s = this.sim.summary();
-    console.log(
-      `\n[summary] trades=${s.trades} wins=${s.wins} losses=${s.losses} ` +
-      `winRate=${(s.winRate * 100).toFixed(1)}% pnl=$${s.pnl.toFixed(4)}\n`
-    );
+    let line = `\n[summary] trades=${s.trades} wins=${s.wins} losses=${s.losses} ` +
+      `winRate=${(s.winRate * 100).toFixed(1)}% pnl=$${s.pnl.toFixed(4)}`;
+    const bands = Object.keys(s.byPrice).sort();
+    if (bands.length) {
+      const parts = bands.map((k) => {
+        const b = s.byPrice[k];
+        return `@${k}: ${b.wins}/${b.n} (${((b.wins / b.n) * 100).toFixed(0)}%) $${b.pnl.toFixed(3)}`;
+      });
+      line += `\n          by entry: ${parts.join("  |  ")}`;
+    }
+    console.log(line + "\n");
+    this.sim.writeStats();
+  }
+
+  /** accessors for the status server */
+  getSim() { return this.sim; }
+  getMeta() {
+    return {
+      feedBTC: this.feed.getLive("BTC"),
+      uptimeSec: process.uptime(),
+      openPositions: this.sim.openCount(),
+    };
   }
 
   heartbeat() {
     const tNowSec = nowSec();
     const btc = this.feed.getLive("BTC");
-    // const eth = this.feed.getLive("ETH");
     const feedOk = btc != null ;
     console.log(`\n-- heartbeat ${new Date().toISOString()} --`);
     console.log(
       `feed: BTC=${btc != null ? btc.toFixed(2) : "NO TICKS"} ` 
-      // + `ETH=${eth != null ? eth.toFixed(2) : "NO TICKS"}${feedOk ? "" : "  !! chainlink feed not delivering"}`
     );
     if (this.blockedGlobal) console.log(`GLOBAL BLOCK: ${this.blockedGlobal}`);
     for (const t of TARGETS) {
