@@ -1,0 +1,29 @@
+{
+  "name": "btc5bot",
+  "version": "0.3.0",
+  "description": "Polymarket BTC/ETH 5m & 15m structured strategy bot (dry-run first)",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "diagnose": "tsx src/diagnose.ts",
+    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "live": "cross-env DRY_RUN=false tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@polymarket/clob-client-v2": "1.0.6",
+    "dotenv": "^16.6.1",
+    "viem": "^2.53.1",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/ws": "^8.18.1",
+    "cross-env": "^7.0.3",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3"
+  }
+}
