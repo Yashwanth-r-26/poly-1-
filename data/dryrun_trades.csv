@@ -1,0 +1,2 @@
+ts,asset,window,side,entryPrice,amountUsd,strike,liveAtEntry,diffAtEntry,secsLeftAtEntry,finalPrice,won,pnl
+2026-06-22T09:20:02.065Z,BTC,300,DOWN,0.98,1,64111.81394,64076.580400046114,35.23,33,64079.32738620209,true,0.020408

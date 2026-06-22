@@ -84,7 +84,14 @@ export class PriceGate {
     }
   }
 
-  /** Rule 3 + 3.1 + 3.2 verdict for this side given the current ask */
+  /**
+   * Rule 3 + 3.1 + 3.2 verdict. Two entry paths (either can fire):
+   *   (A) mark -> leave -> RETURN, then hold >= stabilityMinMs  [original 3.1]
+   *   (B) stable in band >= stabilityMinMs without leaving       [climb-and-hold]
+   * Path B is enabled by config.allowStableEntry. In BOTH paths the stability
+   * timer is `nowMs - atTargetSinceMs`, which is set on first band-entry (MARKED)
+   * and re-set on RETURN — i.e. continuous time in band since last entry.
+   */
   evaluate(key: string, askPrice: number | undefined, nowMs: number): Gate {
     if (askPrice == null) return { pass: false, reason: "no ask" };
     if (this.belowFloor(askPrice)) return { pass: false, reason: `ask ${askPrice} < floor ${config.priceFloor}` };
@@ -92,16 +99,19 @@ export class PriceGate {
       return { pass: false, reason: `ask ${askPrice} above band ${config.priceBandHigh}` };
 
     const t = this.get(key);
-    // 3.1: must have completed mark -> leave -> RETURN
-    if (t.state !== "RETURNED")
-      return { pass: false, reason: `awaiting return (state=${t.state})` };
-    // 3.2: stability >= 2s at target since the return
+    const eligibleState =
+      t.state === "RETURNED" || (config.allowStableEntry && t.state === "MARKED");
+    if (!eligibleState) {
+      const why = config.allowStableEntry ? `state=${t.state}` : `awaiting return (state=${t.state})`;
+      return { pass: false, reason: why };
+    }
     if (t.atTargetSinceMs == null) return { pass: false, reason: "no stability anchor" };
     const stableMs = nowMs - t.atTargetSinceMs;
     if (stableMs < config.stabilityMinMs)
-      return { pass: false, reason: `stable ${stableMs}ms < ${config.stabilityMinMs}ms` };
+      return { pass: false, reason: `in band ${stableMs}ms < ${config.stabilityMinMs}ms` };
 
-    return { pass: true, reason: `returned & stable ${stableMs}ms at ${askPrice}` };
+    const path = t.state === "RETURNED" ? "returned" : "stable";
+    return { pass: true, reason: `${path} & held ${stableMs}ms at ${askPrice}` };
   }
 
   reset(key?: string): void {

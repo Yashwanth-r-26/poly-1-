@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-export type Asset = "BTC" ;
+export type Asset = "BTC" | "ETH";
 export type Interval = "5m" | "15m";
 
 export interface Target {
@@ -55,6 +55,9 @@ export const config = {
 
   // ---- Rule 3.2: stability ----
   stabilityMinMs: num(process.env.STABILITY_MIN_MS, 2000), // 2s+ = good/excellent
+  // entry path B: fire if price holds in band >= stabilityMinMs even WITHOUT a
+  // leave->return (the climb-and-hold case). true = both paths active.
+  allowStableEntry: bool(process.env.ALLOW_STABLE_ENTRY, true),
 
   // ---- Rule 2: order book skew confirmation ----
   // soft signal; veto only when book leans hard AGAINST our side

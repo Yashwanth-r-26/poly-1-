@@ -59,8 +59,8 @@ export class Strategy {
     // ---- GATE ORDER ----
 
     // Rule 5: session
-    const r5 = rule5Session(tNowMs);
-    if (!r5.pass) { this.blockedGlobal = `R5 ${r5.reason}`; return; }
+    // const r5 = rule5Session(tNowMs);
+    // if (!r5.pass) { this.blockedGlobal = `R5 ${r5.reason}`; return; }
 
     // Rule 6: daily loss kill
     const r6 = this.risk.canTrade(tNowMs);
