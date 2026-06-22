@@ -156,6 +156,8 @@ function hhmmToMin(hhmm: string): number {
 }
 
 export function rule5Session(nowMsUtc: number): Gate {
+  // 24/7 mode: session filter disabled -> always allow.
+  if (!config.enableSessionFilter) return { pass: true, reason: "session filter off (24/7)" };
   // Convert to ET. ET = UTC-5 (EST) or UTC-4 (EDT). We compute using the
   // Intl API so DST is handled correctly.
   const et = new Date(nowMsUtc).toLocaleString("en-US", {

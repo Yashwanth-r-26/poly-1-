@@ -13,8 +13,6 @@ export interface Target {
 export const TARGETS: Target[] = [
   { asset: "BTC", interval: "5m", windowSec: 300, symbol: "btc/usd" },
   { asset: "BTC", interval: "15m", windowSec: 900, symbol: "btc/usd" },
-  // { asset: "ETH", interval: "5m", windowSec: 300, symbol: "eth/usd" },
-  // { asset: "ETH", interval: "15m", windowSec: 900, symbol: "eth/usd" },
 ];
 
 const num = (v: string | undefined, d: number) => (v != null && v !== "" ? Number(v) : d);
@@ -64,6 +62,9 @@ export const config = {
   bookVetoSkew: num(process.env.BOOK_VETO_SKEW, 5000), // shares of imbalance against us
 
   // ---- Rule 5: US market session to AVOID (ET) ----
+  // ENABLE_SESSION_FILTER=true skips US market hours. Default OFF = trade 24/7
+  // (for data gathering). Flip on later if the session turns out to matter.
+  enableSessionFilter: bool(process.env.ENABLE_SESSION_FILTER, false),
   avoidSessionStartHHMM: process.env.SESSION_START || "09:30",
   avoidSessionEndHHMM: process.env.SESSION_END || "16:00",
 
