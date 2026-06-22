@@ -7,6 +7,7 @@ import { RiskGate } from "./risk.js";
 import { getActiveMarket, tokenForSide } from "./markets.js";
 import { placeOrder } from "./executor.js";
 import { PnlSim } from "./pnl.js";
+import { SheetsSink } from "./sheets.js";
 
 /**
  * Option C strategy: entry is driven by the order book. When a side's best ask
@@ -20,6 +21,7 @@ export class Strategy {
   private priceGate = new PriceGate();
   private risk = new RiskGate();
   private sim = new PnlSim();
+  private sheets = new SheetsSink();
   private busyToken: string | null = null;
   private busyUntilSec = 0;
 
@@ -51,7 +53,11 @@ export class Strategy {
     for (const t of TARGETS) this.recordWindowPrice(t.asset, t.windowSec);
 
     const settled = this.sim.settleClosed(tNowSec, this.finalPriceFor);
-    for (const s of settled) this.risk.recordOutcome(!!s.won, tNowMs);
+    for (const s of settled) {
+      this.risk.recordOutcome(!!s.won, tNowMs);
+      // durable off-box record — fire and forget (it buffers on failure)
+      void this.sheets.record(s);
+    }
     if (this.busyToken && tNowSec > this.busyUntilSec + 5 && !this.sim.hasOpen()) {
       this.busyToken = null;
     }
@@ -59,8 +65,8 @@ export class Strategy {
     // ---- GATE ORDER ----
 
     // Rule 5: session
-    // const r5 = rule5Session(tNowMs);
-    // if (!r5.pass) { this.blockedGlobal = `R5 ${r5.reason}`; return; }
+    const r5 = rule5Session(tNowMs);
+    if (!r5.pass) { this.blockedGlobal = `R5 ${r5.reason}`; return; }
 
     // Rule 6: daily loss kill
     const r6 = this.risk.canTrade(tNowMs);
@@ -211,6 +217,7 @@ export class Strategy {
   getMeta() {
     return {
       feedBTC: this.feed.getLive("BTC"),
+      feedETH: this.feed.getLive("ETH"),
       uptimeSec: process.uptime(),
       openPositions: this.sim.openCount(),
     };
@@ -219,10 +226,12 @@ export class Strategy {
   heartbeat() {
     const tNowSec = nowSec();
     const btc = this.feed.getLive("BTC");
-    const feedOk = btc != null ;
+    const eth = this.feed.getLive("ETH");
+    const feedOk = btc != null && eth != null;
     console.log(`\n-- heartbeat ${new Date().toISOString()} --`);
     console.log(
-      `feed: BTC=${btc != null ? btc.toFixed(2) : "NO TICKS"} ` 
+      `feed: BTC=${btc != null ? btc.toFixed(2) : "NO TICKS"} ` +
+      `ETH=${eth != null ? eth.toFixed(2) : "NO TICKS"}${feedOk ? "" : "  !! chainlink feed not delivering"}`
     );
     if (this.blockedGlobal) console.log(`GLOBAL BLOCK: ${this.blockedGlobal}`);
     for (const t of TARGETS) {
